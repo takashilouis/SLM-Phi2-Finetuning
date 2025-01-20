@@ -1,0 +1,38 @@
+1. Find top 10 biggest files
+find . -type f -exec du -h {} + | sort -hr | head -n 10
+
+2. squeue
+squeue -u $USER
+
+3. scancel JOBID
+
+4. sbatch xxx.sh
+
+5. Location
+/home/dsu.local/khanh.nguyen
+/scratch/dsu.local/khanh.nguyen
+
+6. Delete Python bytecode cache
+find . -name "*.pyc" -delete
+
+7. Error in Jupyter Lab
+ERROR:
+ImportError                               Traceback (most recent call last)
+Cell In[10], line 3
+      1 from random import randrange
+----> 3 import torch
+      4 from datasets import load_dataset
+      7 from peft import LoraConfig, prepare_model_for_kbit_training, TaskType, PeftModel
+
+File ~/anaconda3/lib/python3.12/site-packages/torch/__init__.py:367
+    365     if USE_GLOBAL_DEPS:
+    366         _load_global_deps()
+--> 367     from torch._C import *  # noqa: F403
+    370 class SymInt:
+    371     """
+    372     Like an int (including magic methods), but redirects all operations on the
+    373     wrapped node. This is used in particular to symbolically record operations
+    374     in the symbolic shape workflow.
+    375     """
+
+ImportError: libtorch_cuda.so: cannot open shared object file: No such file or directory

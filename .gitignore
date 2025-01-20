@@ -1,0 +1,16 @@
+*.err
+*.out
+*.env
+*.safetensors
+*.bin
+*.json
+*.log
+*.pt
+*.pth
+*.arrow*
+*yaml
+wandb
+hf_datasets_cache
+*.save.*
+*.save
+*.md
