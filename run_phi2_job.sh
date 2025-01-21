@@ -1,30 +1,38 @@
 #!/bin/bash
 #SBATCH --job-name=phi2_model_load       # Job name
-#SBATCH --output=phi2_model_load_%j.out  # Output file
-#SBATCH --error=phi2_model_load_%j.err   # Error file
+#SBATCH --output=phi2_model_load_%j.out  # Output file (%j = Job ID)
+#SBATCH --error=phi2_model_load_%j.err   # Error file (%j = Job ID)
 #SBATCH --partition=gpu                  # GPU partition/queue
 #SBATCH --gres=gpu:1                     # Request 1 GPU
-#SBATCH --cpus-per-task=16                # Number of CPUs
-#SBATCH --mem=48G                        # Memory per node
-#SBATCH --time=200:00:00                  # Time limit
+#SBATCH --cpus-per-task=16               # Number of CPUs
+#SBATCH --mem=48G                        # Memory allocation
+#SBATCH --time=200:00:00                 # Time limit (HH:MM:SS)
 
-# Load modules (adjust based on your environment)
+# Load necessary modules (adjust based on your environment)
 module load cuda/11.8.0
 module load python/3.8.15
 
-# Activate your Python environment (if applicable)
-source ~/my_env/bin/activate
+# Activate your Python virtual environment
+source /scratch/dsu.local/khanh.nguyen/my_env/bin/activate
 
-# Upgrade pip
-#pip install --upgrade pip
+# Upgrade pip (optional, ensures compatibility with newer packages)
+# echo "Upgrading pip..."
+# pip install --upgrade pip
 
-# Install required Python libraries
-#pip install -q -U bitsandbytes peft accelerate datasets einops evaluate trl rouge_score
-#pip install -U transformers[sentencepiece]
-#pip install -U sentencepiece
-# Run the Python script
+# Install dependencies from requirements.txt if it exists
+#pip install -r requirements.txt
+pip install -U evaluate
+pip show pynvml tqdm
+# Run the Python script (customize based on the task)
+# Uncomment the script you want to execute
 # python phi2finetuning.py
-#python phi-2-finetuning.py
-#python finetuning-phi2.py
+# python phi-2-finetuning.py
+# python finetuning-phi2.py
 python evaluation.py
-#python download-model-tokenizer.py
+# python download-model-tokenizer.py
+
+# Deactivate the virtual environment after the job completes
+echo "Deactivating virtual environment..."
+deactivate
+
+echo "Job completed successfully!"

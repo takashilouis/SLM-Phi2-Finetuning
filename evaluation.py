@@ -12,7 +12,7 @@ from transformers import (
 )
 from peft import peft_model
 from functools import partial
-from pynvml import nvmlInit, nvmlDeviceGetHandleByIndex, nvmlDeviceGetMemoryInfo
+from pynvml import *
 from peft import LoraConfig, prepare_model_for_kbit_training, TaskType, PeftModel
 import torch
 import evaluate
@@ -21,6 +21,7 @@ import pandas as pd
 import os
 import time
 from tqdm import tqdm
+from datetime import datetime
 
 ######## CUSTOM FUNCTIONS ##########
 # Define memory tracking function
@@ -150,16 +151,19 @@ def summarize_article(index, dataset, model, tokenizer):
 #         print(f"PEFT Model Summary: {peft_model_summaries[i]}", flush=True)
 #         print(f"Reference Summary: {human_baseline_summaries[i]}", flush=True)
 
+from rouge_score import rouge_scorer
+
 def evaluate_model(base_model, peft_model, dataset, tokenizer, batch_size=10, max_articles=100):
     articles = dataset['test']['article'][:max_articles]
     human_baseline_summaries = dataset['test']['highlights'][:max_articles]
     original_model_summaries = []
     peft_model_summaries = []
+    scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL', 'rougeLsum'], use_stemmer=True)
+
     # Process in batches
     for start_idx in tqdm(range(0, len(articles), batch_size),desc= "Processing batches"):
         end_idx = min(start_idx + batch_size, len(articles))
         batch_articles = articles[start_idx:end_idx]
-        tokens = tokenizer(batch_articles, return_tensors="pt", padding=True,truncation=True)
         summary_length = 256
         pad_token_id = tokenizer.eos_token_id if tokenizer.eos_token_id is not None else tokenizer.pad_token_id
         #pad_token_id = tokenizer.eos_token_id or tokenizer.pad_token_id
@@ -174,21 +178,31 @@ def evaluate_model(base_model, peft_model, dataset, tokenizer, batch_size=10, ma
         # Store summaries
         original_model_summaries.extend(original_batch_summaries)
         peft_model_summaries.extend(peft_batch_summaries)
+        
         torch.cuda.empty_cache()
         print(f"Completed batch: {start_idx} to {end_idx}.", flush=True)
+
+    # Compute and print individual ROUGE scores for each article
+    print("\n--- Individual ROUGE Scores ---\n")
+    for i, (gen_summary, ref_summary) in enumerate(zip(original_model_summaries, human_baseline_summaries)):
+        print(f"Article {i + 1}:")
+        scores = scorer.score(ref_summary, gen_summary)
+        for metric, score in scores.items():
+            print(f"  {metric}: {score.fmeasure * 100:.2f}%")
+        print()  # Blank line for better readability
 
     # Compute ROUGE scores for the first 100 articles
     rouge = evaluate.load('rouge')
     # Adjust references to match the length of predictions
     original_model_results = rouge.compute(
         predictions=original_model_summaries,
-        references=human_baseline_summaries,
+        references=human_baseline_summaries[0:end_idx],
         use_aggregator=True,
         use_stemmer=True,
     )
     peft_model_results = rouge.compute(
         predictions=peft_model_summaries,
-        references=human_baseline_summaries,
+        references=human_baseline_summaries[0:end_idx],
         use_aggregator=True,
         use_stemmer=True,
     )
@@ -203,15 +217,16 @@ def evaluate_model(base_model, peft_model, dataset, tokenizer, batch_size=10, ma
     for key, value in zip(peft_model_results.keys(), improvement):
         print(f"{key}: {value * 100:.2f}%", flush=True)
 
-############### MAIN PROGRAM #############
-print(f"{str(int(time.time()))} - Phi2-PEFT-model Evaluation")
+######################### MAIN PROGRAM ###########################
+print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Phi2-PEFT-model Evaluation")
 print("evaluation.py")
+
+# Login to Hugging Face
 from dotenv import load_dotenv
 from huggingface_hub import login
 load_dotenv()
 huggingface_token = os.getenv("HF_HUB_TOKEN")
 
-# Login to Hugging Face
 if huggingface_token:
     login(token=huggingface_token)
     print("Login successful!")
@@ -276,15 +291,16 @@ track_memory("After Loading PEFT Model")
 ########### Sample summarization ##############
 seed = 42
 set_seed(seed)
-# index=0
-# print("BASE MODEL:")
-# summarize_article(index, dataset, base_model, tokenizer)
+index=10
+print("BASE MODEL:")
+summarize_article(index, dataset, base_model, tokenizer)
 
-# print("\nPEFT MODEL:")
-# summarize_article(index, dataset, ft_model, tokenizer)
+print("\nPEFT MODEL:")
+summarize_article(index, dataset, ft_model, tokenizer)
 
 # Process dataset in batches
 batch_size = 10  # Reduced batch size
-evaluate_model(base_model, ft_model, dataset, tokenizer, batch_size=batch_size, max_articles=30)
+evaluate_model(base_model, ft_model, dataset, tokenizer, batch_size=batch_size, max_articles=20)
+
 
 
