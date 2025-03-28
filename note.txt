@@ -15,7 +15,10 @@ squeue -u $USER
 6. Delete Python bytecode cache
 find . -name "*.pyc" -delete
 
-7. Error in Jupyter Lab
+7. du -sh
+40GB in scratch folder.
+
+Error in Jupyter Lab
 ERROR:
 ImportError                               Traceback (most recent call last)
 Cell In[10], line 3
