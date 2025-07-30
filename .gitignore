@@ -15,3 +15,4 @@ hf_datasets_cache
 *.save
 *.md
 my_env
+.DS_Store
